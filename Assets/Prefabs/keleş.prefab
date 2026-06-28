@@ -59,7 +59,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 6989747916639373608}
@@ -109,7 +109,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 9e56301382e08924f9306d335825aa85, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 7830a78d89697664f8ad227d31a1a8ed, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -141,3 +141,8 @@ MonoBehaviour:
   bulletSpeed: 24
   spreadAngle: 4
   automaticFire: 1
+  magazineSize: 12
+  reloadDuration: 1.2
+  reloadKey: 114
+  mountLocalPosition: {x: 0, y: 0, z: 0}
+  mountLocalEulerAngles: {x: 0, y: 0, z: 0}

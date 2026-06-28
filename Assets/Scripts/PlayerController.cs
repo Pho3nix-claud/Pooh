@@ -91,12 +91,14 @@ public class PlayerController : MonoBehaviour
 
         float horizontalInput = 0f;
         moveDirection = Vector3.zero;
+        bool isMovingInput = false;
 
         if (Input.GetKey(KeyCode.D))
         {
             horizontalInput += 1f;
             moveDirection.x += 1f;
             transform.Translate(Vector2.right * speed);
+            isMovingInput = true;
         }
 
         if (Input.GetKey(KeyCode.A))
@@ -104,24 +106,27 @@ public class PlayerController : MonoBehaviour
             horizontalInput -= 1f;
             moveDirection.x -= 1f;
             transform.Translate(Vector2.left * speed);
+            isMovingInput = true;
         }
 
         if (Input.GetKey(KeyCode.W))
         {
             moveDirection.y += 1f;
             transform.Translate(Vector2.up * speed * verticalMoveMultiplier);
+            isMovingInput = true;
         }
 
         if (Input.GetKey(KeyCode.S))
         {
             moveDirection.y -= 1f;
             transform.Translate(Vector2.down * speed * verticalMoveMultiplier);
+            isMovingInput = true;
         }
 
         HandleWeaponPickupInput();
         UpdateWeaponReference();
         UpdateHoldPose();
-        UpdateWalkAnimation(horizontalInput);
+        UpdateWalkAnimation(isMovingInput);
         RefreshAmmoUI();
 
         wasGrounded = isGrounded;
@@ -235,7 +240,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void UpdateWalkAnimation(float horizontalInput)
+    private void UpdateWalkAnimation(bool isMovingInput)
     {
         Transform poseRoot = GetActivePoseRoot();
         Transform poseLeftFoot = FindPoseChild(poseRoot, "left_foot");
@@ -246,7 +251,7 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        bool isWalking = Mathf.Abs(horizontalInput) > 0.01f && isGrounded;
+        bool isWalking = isMovingInput;
         float leftAngleOffset = 0f;
         float rightAngleOffset = 0f;
 
