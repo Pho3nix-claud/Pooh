@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 483368579585866430}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 1.23, y: 0.6, z: 0}
+  m_LocalPosition: {x: 0.743, y: 0.049, z: 0}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -134,6 +134,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bulletPrefab: {fileID: 4100000000000000000, guid: 7f4c53d5bb2f4f64f9f9f8ca6d5f0c11, type: 3}
   firePoint: {fileID: 6721797452015353974}
+  muzzleEffectPrefab: {fileID: 1191586809206013869, guid: 47a1ad472ca0d58498c1e7b2c2c86db1, type: 3}
+  muzzleEffectDuration: 0.08
   weaponName: Glock
   weaponType: 0
   fireRate: 0.35
@@ -141,8 +143,8 @@ MonoBehaviour:
   bulletSpeed: 18
   spreadAngle: 1
   automaticFire: 0
-  magazineSize: 12
-  reloadDuration: 1.2
+  magazineSize: 17
+  reloadDuration: 1.3
   reloadKey: 114
   mountLocalPosition: {x: 1, y: 0, z: 0}
   mountLocalEulerAngles: {x: 0, y: 0, z: 0}

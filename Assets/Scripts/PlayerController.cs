@@ -41,8 +41,15 @@ public class PlayerController : MonoBehaviour
     public Sprite buyMenuCharacterSprite;
     public List<BuyMenuWeaponEntry> buyMenuWeapons = new List<BuyMenuWeaponEntry>();
 
+    public bool aimAtMouse = true;
+    public bool flipBodyToFaceMouse = true;
+    public float bodyAimLimit = 25f;
+    public float aimRotationSpeed = 16f;
+    public Camera aimCamera;
+
     private int jumpCount;
     private bool wasGrounded;
+    private Transform bodyTransform;
     private Transform leftHand;
     private Transform rightHand;
     private Transform leftFoot;
@@ -58,18 +65,29 @@ public class PlayerController : MonoBehaviour
     private GameObject buyMenuRoot;
     private GridLayoutGroup buyMenuGrid;
     private bool isBuyMenuOpen;
+    private Camera cachedAimCamera;
+    private bool facingRight = true;
+    private Quaternion bodyRestLocalRotation = Quaternion.identity;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         playerCollider = GetComponent<Collider2D>();
         animator = GetComponent<Animator>();
+        bodyTransform = transform.Find("body");
         leftHand = transform.Find("body/left_hand") ?? transform.Find("left_hand");
         rightHand = transform.Find("body/right_hand") ?? transform.Find("right_hand");
         leftFoot = transform.Find("body/left_foot") ?? transform.Find("left_foot");
         rightFoot = transform.Find("body/right_foot") ?? transform.Find("right_foot");
         gunPos = EnsureGunPos();
         equippedWeapon = GetComponentInChildren<WeaponControl>();
+        cachedAimCamera = aimCamera != null ? aimCamera : Camera.main;
+
+        if (bodyTransform != null)
+        {
+            bodyRestLocalRotation = bodyTransform.localRotation;
+        }
+
         AttachWeaponToGunPos(true);
         UpdateAnimationState(false);
         CreateAmmoUIIfNeeded();
@@ -126,6 +144,7 @@ public class PlayerController : MonoBehaviour
         HandleWeaponPickupInput();
         UpdateWeaponReference();
         UpdateHoldPose();
+        UpdateAimRotation();
         UpdateWalkAnimation(isMovingInput);
         RefreshAmmoUI();
 
@@ -230,13 +249,100 @@ public class PlayerController : MonoBehaviour
         if (leftHand != null && poseLeftHand != null)
         {
             leftHand.localPosition = Vector3.Lerp(leftHand.localPosition, poseLeftHand.localPosition, Time.deltaTime * poseBlendSpeed);
-            leftHand.localRotation = Quaternion.Lerp(leftHand.localRotation, poseLeftHand.localRotation, Time.deltaTime * poseBlendSpeed);
+
+            if (!aimAtMouse)
+            {
+                leftHand.localRotation = Quaternion.Lerp(leftHand.localRotation, poseLeftHand.localRotation, Time.deltaTime * poseBlendSpeed);
+            }
         }
 
         if (rightHand != null && poseRightHand != null)
         {
             rightHand.localPosition = Vector3.Lerp(rightHand.localPosition, poseRightHand.localPosition, Time.deltaTime * poseBlendSpeed);
-            rightHand.localRotation = Quaternion.Lerp(rightHand.localRotation, poseRightHand.localRotation, Time.deltaTime * poseBlendSpeed);
+
+            if (!aimAtMouse)
+            {
+                rightHand.localRotation = Quaternion.Lerp(rightHand.localRotation, poseRightHand.localRotation, Time.deltaTime * poseBlendSpeed);
+            }
+        }
+    }
+
+    private void UpdateAimRotation()
+    {
+        if (!aimAtMouse || rightHand == null)
+        {
+            return;
+        }
+
+        Camera activeCamera = cachedAimCamera != null ? cachedAimCamera : Camera.main;
+        if (activeCamera == null)
+        {
+            return;
+        }
+
+        Plane aimPlane = new Plane(Vector3.forward, new Vector3(0f, 0f, rightHand.position.z));
+        Ray cameraRay = activeCamera.ScreenPointToRay(Input.mousePosition);
+
+        if (!aimPlane.Raycast(cameraRay, out float rayDistance))
+        {
+            return;
+        }
+
+        Vector3 mouseWorldPosition = cameraRay.GetPoint(rayDistance);
+        Vector2 aimDirection = mouseWorldPosition - rightHand.position;
+
+        if (aimDirection.sqrMagnitude < 0.0001f)
+        {
+            return;
+        }
+
+        if (flipBodyToFaceMouse && Mathf.Abs(aimDirection.x) > 0.05f)
+        {
+            facingRight = aimDirection.x > 0f;
+            ApplyFacingDirection(facingRight);
+        }
+
+        // Dunya acisini hesapla, karakter ters bakiyorsa aynalama duzeltmesi uygula.
+        float worldAngle = Mathf.Atan2(aimDirection.y, aimDirection.x) * Mathf.Rad2Deg;
+        float fullLocalAngle = (flipBodyToFaceMouse && !facingRight) ? 180f - worldAngle : worldAngle;
+
+        // -180..180 araligina normalize et, boylece Clamp dogru calissin.
+        fullLocalAngle = Mathf.DeltaAngle(0f, fullLocalAngle);
+
+        // Govde (bel) sadece sinirli bir aciyla egilir, gercekci durmasi icin.
+        float bodyCurrentAngle = 0f;
+
+        if (bodyTransform != null)
+        {
+            float clampedBodyAngle = Mathf.Clamp(fullLocalAngle, -bodyAimLimit, bodyAimLimit);
+            Quaternion bodyTargetRotation = bodyRestLocalRotation * Quaternion.Euler(0f, 0f, clampedBodyAngle);
+            bodyTransform.localRotation = Quaternion.Slerp(bodyTransform.localRotation, bodyTargetRotation, Time.deltaTime * aimRotationSpeed);
+
+            Quaternion bodyRelativeRotation = Quaternion.Inverse(bodyRestLocalRotation) * bodyTransform.localRotation;
+            bodyCurrentAngle = Mathf.DeltaAngle(0f, bodyRelativeRotation.eulerAngles.z);
+        }
+
+        // Eller, govdenin kalan farkini tamamlayarak nisanin tam mouse'a denk gelmesini saglar.
+        // Sol el de sag elle AYNI hedef aciya gider, boylece silahi iki elle tutuyormus gibi gorunur.
+        float handLocalAngle = fullLocalAngle - bodyCurrentAngle;
+        Quaternion handTargetRotation = Quaternion.Euler(0f, 0f, handLocalAngle);
+
+        rightHand.localRotation = Quaternion.Slerp(rightHand.localRotation, handTargetRotation, Time.deltaTime * aimRotationSpeed);
+
+        if (leftHand != null)
+        {
+            leftHand.localRotation = Quaternion.Slerp(leftHand.localRotation, handTargetRotation, Time.deltaTime * aimRotationSpeed);
+        }
+    }
+
+    private void ApplyFacingDirection(bool faceRight)
+    {
+        Vector3 currentScale = transform.localScale;
+        float signedX = faceRight ? Mathf.Abs(currentScale.x) : -Mathf.Abs(currentScale.x);
+
+        if (!Mathf.Approximately(currentScale.x, signedX))
+        {
+            transform.localScale = new Vector3(signedX, currentScale.y, currentScale.z);
         }
     }
 

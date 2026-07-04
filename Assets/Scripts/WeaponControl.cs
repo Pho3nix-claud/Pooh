@@ -3,6 +3,7 @@ using UnityEngine;
 public class WeaponControl : MonoBehaviour
 {
     public static bool InputBlockedByUI;
+
     public enum WeaponType
     {
         Pistol,
@@ -14,13 +15,20 @@ public class WeaponControl : MonoBehaviour
     public GameObject bulletPrefab;
     public Transform firePoint;
 
+    [Header("Effects")]
+    public GameObject muzzleEffectPrefab;
+    public float muzzleEffectDuration = 0.08f;
+
     [Header("Weapon Settings")]
     public string weaponName = "Weapon";
     public WeaponType weaponType = WeaponType.Pistol;
     public float fireRate = 0.3f;
     public int bulletCountPerShot = 1;
     public float bulletSpeed = 20f;
-    public float spreadAngle = 0f;
+
+    [Tooltip("Kursunların ne kadar saçılacağı (derece). 0 = tam isabetli.")]
+    public float spreadAngle = 8f;
+
     public bool automaticFire;
     public int magazineSize = 12;
     public float reloadDuration = 1.2f;
@@ -84,6 +92,9 @@ public class WeaponControl : MonoBehaviour
         transform.localPosition = targetLocalPosition;
         transform.localRotation = Quaternion.Euler(HasCustomMountRotation() ? mountLocalEulerAngles : GetDefaultMountLocalEulerAngles());
         isEquipped = true;
+
+        // Silah alininca ucun yonu mount'a gore ayarlanir.
+        AlignFirePointToMuzzle();
     }
 
     public void DropToWorld(Vector3 worldPosition)
@@ -92,7 +103,24 @@ public class WeaponControl : MonoBehaviour
         isReloading = false;
         transform.SetParent(null, true);
         transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
+
+        // Silah birakilinca her zaman sag yone bak (ucu saga).
         transform.rotation = Quaternion.identity;
+
+        if (firePoint != null)
+        {
+            firePoint.localRotation = Quaternion.identity;
+        }
+    }
+
+    // Silah alininca firePoint'in lokal rotasyonunu sifirla,
+    // yonü mount + aim sistemi belirlesin.
+    private void AlignFirePointToMuzzle()
+    {
+        if (firePoint != null)
+        {
+            firePoint.localRotation = Quaternion.identity;
+        }
     }
 
     public bool CanBePickedUp()
@@ -124,16 +152,19 @@ public class WeaponControl : MonoBehaviour
     {
         if (bulletPrefab == null)
         {
-            Debug.LogWarning($"{weaponName} için mermi prefabı eksik.", this);
+            Debug.LogWarning($"{weaponName} icin mermi prefabi eksik.", this);
             return;
         }
 
         Transform spawnPoint = GetFirePoint();
+        float baseAngle = GetMuzzleWorldAngle(spawnPoint);
 
-        for (int index = 0; index < Mathf.Max(1, bulletCountPerShot); index++)
+        SpawnMuzzleEffect(spawnPoint, baseAngle);
+
+        for (int i = 0; i < Mathf.Max(1, bulletCountPerShot); i++)
         {
-            float angleOffset = GetSpreadOffset(index);
-            Quaternion spawnRotation = spawnPoint.rotation * Quaternion.Euler(0f, 0f, angleOffset);
+            float angleOffset = GetSpreadOffset(i);
+            Quaternion spawnRotation = Quaternion.Euler(0f, 0f, baseAngle + angleOffset);
             GameObject bulletObject = Instantiate(bulletPrefab, spawnPoint.position, spawnRotation);
             Bullet bullet = bulletObject.GetComponent<Bullet>();
 
@@ -142,6 +173,29 @@ public class WeaponControl : MonoBehaviour
                 bullet.SetSpeed(bulletSpeed);
             }
         }
+    }
+
+    private void SpawnMuzzleEffect(Transform spawnPoint, float worldAngle)
+    {
+        if (muzzleEffectPrefab == null)
+        {
+            return;
+        }
+
+        // Muzzle flash'i dunya rotasyonuyla spawn ediyoruz (SetParent yerine),
+        // bu sekilde karakter sola baksa da efekt namlunun gercek yonune bakiyor.
+        Quaternion flashRotation = Quaternion.Euler(0f, 0f, worldAngle);
+        GameObject effect = Instantiate(muzzleEffectPrefab, spawnPoint.position, flashRotation);
+        Destroy(effect, muzzleEffectDuration);
+    }
+
+    private static float GetMuzzleWorldAngle(Transform muzzle)
+    {
+        // TransformPoint tum matrisi (scale/flip dahil) kullanir,
+        // bu sayede karakter sola bakinca da dogru aci hesaplanir.
+        Vector3 forwardPoint = muzzle.TransformPoint(Vector3.right);
+        Vector3 muzzleForward = forwardPoint - muzzle.position;
+        return Mathf.Atan2(muzzleForward.y, muzzleForward.x) * Mathf.Rad2Deg;
     }
 
     private Transform GetFirePoint()
@@ -163,9 +217,9 @@ public class WeaponControl : MonoBehaviour
 
     private float GetSpreadOffset(int bulletIndex)
     {
-        if (bulletCountPerShot <= 1 || spreadAngle <= 0f)
+        if (bulletCountPerShot <= 1)
         {
-            return 0f;
+            return Random.Range(-spreadAngle, spreadAngle);
         }
 
         float step = spreadAngle / (bulletCountPerShot - 1);

@@ -134,6 +134,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bulletPrefab: {fileID: 4100000000000000000, guid: 7f4c53d5bb2f4f64f9f9f8ca6d5f0c11, type: 3}
   firePoint: {fileID: 1484965738871805164}
+  muzzleEffectPrefab: {fileID: 1191586809206013869, guid: 47a1ad472ca0d58498c1e7b2c2c86db1, type: 3}
+  muzzleEffectDuration: 0.08
   weaponName: Mac10
   weaponType: 1
   fireRate: 0.07
