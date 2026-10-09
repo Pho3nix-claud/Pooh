@@ -152,7 +152,6 @@ public class WeaponControl : MonoBehaviour
     {
         if (bulletPrefab == null)
         {
-            Debug.LogWarning($"{weaponName} icin mermi prefabi eksik.", this);
             return;
         }
 
