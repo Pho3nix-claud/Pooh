@@ -14,6 +14,7 @@ public class WeaponControl : MonoBehaviour
     [Header("References")]
     public GameObject bulletPrefab;
     public Transform firePoint;
+    public Camera aimCamera;
 
     [Header("Effects")]
     public GameObject muzzleEffectPrefab;
@@ -156,9 +157,11 @@ public class WeaponControl : MonoBehaviour
         }
 
         Transform spawnPoint = GetFirePoint();
-        float baseAngle = GetMuzzleWorldAngle(spawnPoint);
+        float muzzleAngle = GetMuzzleWorldAngle(spawnPoint);
+        Vector2 aimDirection = GetAimDirection(spawnPoint);
+        float baseAngle = Mathf.Atan2(aimDirection.y, aimDirection.x) * Mathf.Rad2Deg;
 
-        SpawnMuzzleEffect(spawnPoint, baseAngle);
+        SpawnMuzzleEffect(spawnPoint, muzzleAngle);
 
         for (int i = 0; i < Mathf.Max(1, bulletCountPerShot); i++)
         {
@@ -195,6 +198,32 @@ public class WeaponControl : MonoBehaviour
         Vector3 forwardPoint = muzzle.TransformPoint(Vector3.right);
         Vector3 muzzleForward = forwardPoint - muzzle.position;
         return Mathf.Atan2(muzzleForward.y, muzzleForward.x) * Mathf.Rad2Deg;
+    }
+
+    // Mermi namludan cikar ama crosshair'e (fare noktasi) dogru ucar.
+    private Vector2 GetAimDirection(Transform spawnPoint)
+    {
+        Camera activeCamera = aimCamera != null ? aimCamera : Camera.main;
+
+        if (activeCamera != null)
+        {
+            Plane aimPlane = new Plane(Vector3.forward, spawnPoint.position);
+            Ray cameraRay = activeCamera.ScreenPointToRay(Input.mousePosition);
+
+            if (aimPlane.Raycast(cameraRay, out float rayDistance))
+            {
+                Vector2 aimPoint = cameraRay.GetPoint(rayDistance);
+                Vector2 direction = aimPoint - (Vector2)spawnPoint.position;
+
+                if (direction.sqrMagnitude > 0.0001f)
+                {
+                    return direction.normalized;
+                }
+            }
+        }
+
+        // Kamera yoksa ya da namlu zaten crosshair uzerindeyse namlu yonunu kullan.
+        return Quaternion.Euler(0f, 0f, GetMuzzleWorldAngle(spawnPoint)) * Vector2.right;
     }
 
     private Transform GetFirePoint()
