@@ -137,5 +137,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 98ff0e887143436ba1adb4d071659e79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hitPoints: 1
-  hitMoveOffset: {x: 0, y: -1}
+  maxHealth: 100
+  currentHealth: 100
+  deathRotationAngle: 90
+  fallDuration: 0.2
